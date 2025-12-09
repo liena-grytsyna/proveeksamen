@@ -18,6 +18,7 @@ let username = `Gjest-${Math.floor(Math.random() * 900 + 100)}`
 let currentRoom = 'general'
 const roomMessages = new Map()
 let socket = null
+let currentStatus = 'connecting'
 
 const usernameInput = document.getElementById('usernameInput')
 const messageInput = document.getElementById('messageInput')
@@ -28,10 +29,22 @@ const statusElement = document.getElementById('status')
 const statusText = statusElement.querySelector('.status__text')
 const activeRoomLabel = document.getElementById('activeRoomLabel')
 const roomSwitcher = document.getElementById('roomSwitcher')
+const usernameField = usernameInput.closest('.field')
 
 usernameInput.value = ''
 
 const hasUsername = () => usernameInput.value.trim().length > 0
+
+const refreshUiState = () => {
+  const validName = hasUsername()
+  const isConnected = currentStatus === 'connected'
+
+  sendButton.disabled = !isConnected || !validName
+  messageInput.placeholder = validName ? 'Skriv en melding...' : 'Skriv navnet ditt først'
+  if (usernameField) {
+    usernameField.classList.toggle('field--error', !validName)
+  }
+}
 
 function ensureRoom(room) {
   if (!roomMessages.has(room)) {
@@ -81,11 +94,11 @@ function initSocket() {
 }
 
 function updateStatus(status, text) {
+  currentStatus = status
   statusElement.classList.remove('status--connected', 'status--disconnected', 'status--error', 'status--connecting')
   statusElement.classList.add(`status--${status}`)
   statusText.textContent = text
-  sendButton.disabled = status !== 'connected' || !hasUsername()
-  messageInput.placeholder = hasUsername() ? 'Skriv en melding...' : 'Skriv navnet ditt først'
+  refreshUiState()
 }
 
 function joinRoom(room) {

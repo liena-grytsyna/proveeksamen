@@ -129,6 +129,15 @@
   font-size: 0.95rem;
 }
 
+.field--error .field__label {
+  color: #ff6b6b;
+}
+
+.field--error input {
+  border-color: #ff6b6b;
+  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2);
+}
+
 .hint {
   margin-top: 1.5rem;
   padding: 1rem 1.1rem;
