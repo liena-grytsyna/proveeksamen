@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.github
+npm-debug.log*
+yarn-error.log*
+pnp.*.js
+.DS_Store
+*.local

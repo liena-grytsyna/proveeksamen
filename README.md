@@ -25,6 +25,10 @@ npm run dev
 - `npm run build` – prod-bygg av klienten.
 - `npm start` – kun server (nyttig etter bygg).
 
+## CI (GitHub Actions)
+- Workflow: `.github/workflows/ci.yml`.
+- Запускается на push/PR в `main`, выполняет `npm ci`, `npm run lint`, `npm run build`, а также пробное `docker build` для таргетов `server` и `nginx`.
+
 ## Miljøvariabler
 - `VITE_SOCKET_URL` – URL til Socket.IO for klienten (default `http://localhost:3001`).
 - `PORT` – port for serveren (default `3001`).
