@@ -36,6 +36,11 @@
         </section>
 
         <section class="chat__panel">
+          <div class="switcher" id="roomSwitcher" role="tablist" aria-label="Rom">
+            <button class="switcher__tab is-active" data-room="general" role="tab" aria-selected="true">Felles</button>
+            <button class="switcher__tab" data-room="team" role="tab" aria-selected="false">Team</button>
+            <div class="switcher__info">Aktivt rom: <span id="activeRoomLabel">Felles</span></div>
+          </div>
           <div class="messages" id="messagesContainer" aria-live="polite"></div>
           <form class="composer" id="messageForm">
             <input

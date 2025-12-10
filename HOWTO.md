@@ -77,53 +77,22 @@ Målet: flere chat-rom, robust melding-validering (maks 280 tegn), og tydelige f
 
 - Klientlogikk (`src/main.js`) — romstyring og historie. Nøkkelelementer:
 
+```md
+Kort: legge til et nytt chat-rom
+
+1) I `index.html` — legg til en knapp i switcheren ved behov:
+
+```html
+<button class="switcher__tab" data-room="<NY_ID>" role="tab">Etikett</button>
+```
+
+2) I `src/main.js` — legg til en etikett i `ROOM_LABELS` (valgfritt):
+
 ```js
-// Простая хранилка историй по комнате
-const rooms = new Map()
-const ensure = (r) => { if (!rooms.has(r)) rooms.set(r, []); return rooms.get(r) }
+ROOM_LABELS['<NY_ID>'] = 'Etikett'
+```
 
-// Установить активную комнату и отрисовать её историю
-function setRoom(r) {
-  if (!r || r === currentRoom) return
-  currentRoom = r
-  document.querySelectorAll('.switcher__tab').forEach(t => t.classList.toggle('is-active', t.dataset.room === r))
-  if (activeRoomLabel) activeRoomLabel.textContent = ROOM_LABELS[r] || r
-  renderHistory()
-  socket.emit('chat:join', { room: r }) // попросить сервер прислать историю
-}
-
-// Рендер истории текущей комнаты
-function renderHistory() {
-  const list = ensure(currentRoom)
-  showHistory(list)
-}
-
-// Обработчик клика по переключателю (делегирование)
-document.getElementById('roomSwitcher')?.addEventListener('click', (ev) => {
-  const btn = ev.target.closest('.switcher__tab')
-  if (!btn) return
-  setRoom(btn.dataset.room)
-})
-
-// Сервер присылает историю для конкретной комнаты
-socket.on('chat:history', (payload = {}) => {
-  const r = payload.room || 'general'
-  const list = Array.isArray(payload.history) ? payload.history : []
-  rooms.set(r, list)
-  if (r === currentRoom) renderHistory()
-})
-
-// Новое сообщение от сервера — сохраняем и рендерим если нужно
-socket.on('chat:message', (msg = {}) => {
-  const r = msg.room || 'general'
-  ensure(r).push(msg)
-  if (r === currentRoom) addMessage(msg)
-})
-
-// Когда отправляете, не забывайте указать комнату
-function sendMessage(text) {
-  socket.emit('chat:message', { user: usernameInput.value.trim() || 'Guest', text, room: currentRoom })
-}
+Klienten bruker `data-room` for å sende/filtrere meldinger. Serveren må sette/lese `payload.room` for å håndtere rom riktig.
 ```
 
 På serversiden må du ta imot `payload.room` og lagre/emittere meldingen til riktig rom (se server-eksempel under).
