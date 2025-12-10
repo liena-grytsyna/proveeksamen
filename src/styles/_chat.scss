@@ -1,0 +1,159 @@
+@use './variables' as vars;
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem clamp(1rem, 2vw, 2rem) 3rem;
+}
+
+.switcher {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.5rem 0 0.5rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+  box-shadow: var(--shadow);
+  flex-wrap: wrap;
+
+  &__tab {
+    padding: 0.65rem 1rem;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: vars.$glass-04;
+    color: var(--text-primary);
+    box-shadow: none;
+
+    &.is-active {
+      background: vars.$switcher-active-gradient;
+      border-color: vars.$glass-04;
+    }
+  }
+
+  &__info {
+    margin-left: auto;
+    color: var(--text-secondary);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+}
+
+.chat {
+  margin-top: 2rem;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 280px 1fr;
+  align-items: start;
+}
+
+.panel {
+  background: var(--panel);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field__label {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.field--error .field__label {
+  color: vars.$color-error;
+}
+
+.field--error input {
+  border-color: vars.$color-error;
+  box-shadow: 0 0 0 3px rgba(255, 79, 97, 0.2);
+}
+
+.hint {
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  background: vars.$glass-03;
+  border-left: 3px solid var(--accent);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.chat__panel {
+  background: var(--panel);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 520px;
+}
+
+.messages {
+  flex: 1 1 auto;
+  min-height: 320px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  background: var(--panel-strong);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+.message {
+  padding: 0.8rem 0.9rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 138, 61, 0.08), rgba(25, 185, 149, 0.07));
+  border: 1px solid vars.$glass-04;
+  box-shadow: vars.$shadow-message;
+}
+
+.message {
+  &__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  &__user {
+    color: var(--accent-2);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  &__text {
+    margin: 0.35rem 0 0;
+    font-size: 1rem;
+  }
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  background: vars.$glass-03;
+  border: 1px solid var(--border);
+  box-shadow: vars.$shadow-composer;
+}
+
+.composer input {
+  flex: 1;
+}
