@@ -9,16 +9,10 @@ const fallbackSocketUrl =
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? fallbackSocketUrl
 
-const ROOM_LABELS = {
-  general: 'Felles',
-  team: 'Team',
-}
-
 let username = `Gjest-${Math.floor(Math.random() * 900 + 100)}`
-let currentRoom = 'general'
-const roomMessages = new Map()
 let socket = null
 let currentStatus = 'connecting'
+let messages = []
 
 const usernameInput = document.getElementById('usernameInput')
 const messageInput = document.getElementById('messageInput')
@@ -27,8 +21,6 @@ const sendButton = document.getElementById('sendButton')
 const messagesContainer = document.getElementById('messagesContainer')
 const statusElement = document.getElementById('status')
 const statusText = statusElement.querySelector('.status__text')
-const activeRoomLabel = document.getElementById('activeRoomLabel')
-const roomSwitcher = document.getElementById('roomSwitcher')
 const usernameField = usernameInput.closest('.field')
 
 usernameInput.value = ''
@@ -40,17 +32,13 @@ const refreshUiState = () => {
   const isConnected = currentStatus === 'connected'
 
   sendButton.disabled = !isConnected || !validName
-  messageInput.placeholder = validName ? 'Skriv en melding...' : 'Skriv navnet ditt først'
+  messageInput.placeholder = validName
+    ? 'Skriv en melding...'
+    : 'Skriv navnet ditt først'
+
   if (usernameField) {
     usernameField.classList.toggle('field--error', !validName)
   }
-}
-
-function ensureRoom(room) {
-  if (!roomMessages.has(room)) {
-    roomMessages.set(room, [])
-  }
-  return roomMessages.get(room)
 }
 
 function initSocket() {
@@ -60,7 +48,6 @@ function initSocket() {
 
   socket.on('connect', () => {
     updateStatus('connected', 'tilkoblet')
-    joinRoom(currentRoom)
   })
 
   socket.on('disconnect', () => {
@@ -71,22 +58,14 @@ function initSocket() {
     updateStatus('error', 'feil')
   })
 
-  socket.on('chat:history', ({ room, history = [] } = {}) => {
-    const targetRoom = room || currentRoom
-    roomMessages.set(targetRoom, history)
-    if (targetRoom === currentRoom) {
-      renderMessages()
-    }
+  socket.on('chat:history', ({ history = [] } = {}) => {
+    messages = history
+    renderMessages()
   })
 
   socket.on('chat:message', (incoming) => {
-    const room = incoming?.room || currentRoom
-    const list = ensureRoom(room)
-    list.push(incoming)
-
-    if (room === currentRoom) {
-      renderMessages()
-    }
+    messages.push(incoming)
+    renderMessages()
   })
 
   updateStatus('connecting', 'kobler til...')
@@ -95,32 +74,15 @@ function initSocket() {
 
 function updateStatus(status, text) {
   currentStatus = status
-  statusElement.classList.remove('status--connected', 'status--disconnected', 'status--error', 'status--connecting')
+  statusElement.classList.remove(
+    'status--connected',
+    'status--disconnected',
+    'status--error',
+    'status--connecting',
+  )
   statusElement.classList.add(`status--${status}`)
   statusText.textContent = text
   refreshUiState()
-}
-
-function joinRoom(room) {
-  currentRoom = room
-  activeRoomLabel.textContent = ROOM_LABELS[room] || room
-  updateSwitcher(room)
-  messagesContainer.innerHTML = ''
-
-  if (socket?.connected) {
-    socket.emit('chat:join', { room })
-  }
-
-  renderMessages()
-}
-
-function updateSwitcher(room) {
-  const buttons = roomSwitcher.querySelectorAll('.switcher__tab')
-  buttons.forEach((btn) => {
-    const isActive = btn.dataset.room === room
-    btn.classList.toggle('is-active', isActive)
-    btn.setAttribute('aria-selected', isActive ? 'true' : 'false')
-  })
 }
 
 function sendMessage(event) {
@@ -139,7 +101,6 @@ function sendMessage(event) {
   socket.emit('chat:message', {
     user: userValue,
     text,
-    room: currentRoom,
   })
 
   messageInput.value = ''
@@ -147,10 +108,9 @@ function sendMessage(event) {
 }
 
 function renderMessages() {
-  const list = ensureRoom(currentRoom)
   messagesContainer.innerHTML = ''
 
-  list.forEach((msg) => {
+  messages.forEach((msg) => {
     const messageEl = document.createElement('article')
     messageEl.className = 'message'
 
@@ -171,7 +131,7 @@ function renderMessages() {
 }
 
 function formatTime(timestamp) {
-  if (!timestamp) return '—'
+  if (!timestamp) return '--:--'
 
   return new Date(timestamp).toLocaleTimeString([], {
     hour: '2-digit',
@@ -187,22 +147,19 @@ function escapeHtml(text) {
 
 usernameInput.addEventListener('change', (event) => {
   username = event.target.value || username
-  updateStatus(socket?.connected ? 'connected' : 'connecting', statusText.textContent)
+  updateStatus(
+    socket?.connected ? 'connected' : 'connecting',
+    statusText.textContent,
+  )
 })
 
 usernameInput.addEventListener('input', () => {
-  updateStatus(socket?.connected ? 'connected' : 'connecting', statusText.textContent)
+  updateStatus(
+    socket?.connected ? 'connected' : 'connecting',
+    statusText.textContent,
+  )
 })
 
 messageForm.addEventListener('submit', sendMessage)
-
-roomSwitcher.addEventListener('click', (event) => {
-  const button = event.target.closest('.switcher__tab')
-  if (!button) return
-  const room = button.dataset.room
-  if (room && room !== currentRoom) {
-    joinRoom(room)
-  }
-})
 
 initSocket()
