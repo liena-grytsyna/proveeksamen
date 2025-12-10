@@ -21,6 +21,7 @@ Dette dokumentet viser hvordan du kan implementere kravene i tre kategorier: Utv
    </div>
    ```
    ```scss
+   // husk: @use './variables' as vars; overst i SCSS-filen
    .switcher {
      display: flex;
      align-items: center;
@@ -37,7 +38,7 @@ Dette dokumentet viser hvordan du kan implementere kravene i tre kategorier: Utv
      padding: 0.65rem 1rem;
      border-radius: 12px;
      border: 1px solid transparent;
-     background: rgba(255, 255, 255, 0.04);
+     background: vars.$glass-04;
      color: var(--text-primary);
      box-shadow: none;
    }

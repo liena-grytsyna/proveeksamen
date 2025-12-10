@@ -10,9 +10,9 @@ const fallbackSocketUrl =
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? fallbackSocketUrl
 
 let username = `Gjest-${Math.floor(Math.random() * 900 + 100)}`
-let messages = []
 let socket = null
 let currentStatus = 'connecting'
+let messages = []
 
 const usernameInput = document.getElementById('usernameInput')
 const messageInput = document.getElementById('messageInput')
@@ -32,7 +32,10 @@ const refreshUiState = () => {
   const isConnected = currentStatus === 'connected'
 
   sendButton.disabled = !isConnected || !validName
-  messageInput.placeholder = validName ? 'Skriv en melding...' : 'Skriv navnet ditt først'
+  messageInput.placeholder = validName
+    ? 'Skriv en melding...'
+    : 'Skriv navnet ditt først'
+
   if (usernameField) {
     usernameField.classList.toggle('field--error', !validName)
   }
@@ -71,7 +74,12 @@ function initSocket() {
 
 function updateStatus(status, text) {
   currentStatus = status
-  statusElement.classList.remove('status--connected', 'status--disconnected', 'status--error', 'status--connecting')
+  statusElement.classList.remove(
+    'status--connected',
+    'status--disconnected',
+    'status--error',
+    'status--connecting',
+  )
   statusElement.classList.add(`status--${status}`)
   statusText.textContent = text
   refreshUiState()
@@ -123,7 +131,7 @@ function renderMessages() {
 }
 
 function formatTime(timestamp) {
-  if (!timestamp) return '—'
+  if (!timestamp) return '--:--'
 
   return new Date(timestamp).toLocaleTimeString([], {
     hour: '2-digit',
@@ -139,11 +147,17 @@ function escapeHtml(text) {
 
 usernameInput.addEventListener('change', (event) => {
   username = event.target.value || username
-  updateStatus(socket?.connected ? 'connected' : 'connecting', statusText.textContent)
+  updateStatus(
+    socket?.connected ? 'connected' : 'connecting',
+    statusText.textContent,
+  )
 })
 
 usernameInput.addEventListener('input', () => {
-  updateStatus(socket?.connected ? 'connected' : 'connecting', statusText.textContent)
+  updateStatus(
+    socket?.connected ? 'connected' : 'connecting',
+    statusText.textContent,
+  )
 })
 
 messageForm.addEventListener('submit', sendMessage)
