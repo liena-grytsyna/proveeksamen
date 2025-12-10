@@ -1,234 +1,337 @@
-# HOWTO: Exam requirements (step by step)
+# HOWTO: Komplett oppskrift med kode
 
-Dette dokumentet viser hvordan du kan implementere kravene i tre kategorier: Utvikling, Brukerstotte og Driftsstotte. Foelg rekkefolgen for minst friksjon.
+Under er en fullstendig bruksanvisning med ferdige kodeblokker du kan lime inn. Rekkefolge: Utvikling (rom, validering, UI), Brukerstotte (regler/feilmeldinger/README), Driftsstotte (Docker/Nginx/CI).
 
 ## Forutsetninger
-- Kjoer lokalt: `npm install`, `npm run dev` (klient 5173 + server 3001).
-- Klientfiler: `index.html`, `src/main.js`, `src/styles/App.scss`.
-- Serverfil: `server/index.js`.
+- Lokalt: `npm install`, `npm run dev` (klient 5173, server 3001).
+- Filer du endrer: `index.html`, `src/main.js`, `src/styles/_chat.scss` (og evt. `App.scss`), `server/index.js`, `README.md`.
 
 ---
 
 ## Utvikling
 
-### A) Nytt chat-rom i eksisterende kode
-1) **UI (index.html)**: Legg til et rom-panel med to knapper og en label:
-   ```html
-   <div class="switcher" id="roomSwitcher" role="tablist" aria-label="Rom">
-     <button class="switcher__tab is-active" data-room="general" role="tab" aria-selected="true">Felles</button>
-     <button class="switcher__tab" data-room="team" role="tab" aria-selected="false">Team</button>
-     <div class="switcher__info">Aktivt rom: <span id="activeRoomLabel">Felles</span></div>
-   </div>
-   ```
-   ```scss
-   // husk: @use './variables' as vars; overst i SCSS-filen
-   .switcher {
-     display: flex;
-     align-items: center;
-     gap: 0.75rem;
-     margin: 1.5rem 0 0.5rem;
-     background: var(--panel);
-     border: 1px solid var(--border);
-     border-radius: 14px;
-     padding: 0.75rem 1rem;
-     box-shadow: var(--shadow);
-     flex-wrap: wrap;
-   }
-   .switcher__tab {
-     padding: 0.65rem 1rem;
-     border-radius: 12px;
-     border: 1px solid transparent;
-     background: vars.$glass-04;
-     color: var(--text-primary);
-     box-shadow: none;
-   }
-   .switcher__tab.is-active {
-     background: linear-gradient(135deg, rgba(255, 138, 61, 0.18), rgba(25, 185, 149, 0.18));
-     border-color: rgba(255, 255, 255, 0.12);
-   }
-   .switcher__info {
-     color: var(--text-secondary);
-     margin-left: auto;
-     font-weight: 600;
-     display: flex;
-     align-items: center;
-     gap: 0.35rem;
-   }
-   ```
-2) **Klient-state (src/main.js)**:
-   - Legg til `const ROOM_LABELS = { general: 'Felles', team: 'Team' }`.
-   - Legg til `let currentRoom = 'general'` og `const roomMessages = new Map()`.
-3) **Bytte rom**:
-   - Lag funksjon `joinRoom(room)` som:
-     - setter `currentRoom = room`;
-     - oppdaterer aktiv knapp/aria-selected;
-     - toemmer `messagesContainer.innerHTML = ''`;
-     - `socket.emit('chat:join', { room })` hvis tilkoblet;
-     - kaller `renderMessages()` for valgt rom.
-   - Lytt paa `click` paa `#roomSwitcher` (event delegation), finn naermeste `.switcher__tab`, sammenlikn `data-room`, og kall `joinRoom`.
-4) **Historikk per rom**:
-   - Lag helper `ensureRoom(room)` som oppretter `roomMessages.set(room, [])` ved behov og returnerer arrayet.
-   - Paa `chat:history`: hent `room` fra payload (default `currentRoom`), `roomMessages.set(room, history)`, og render bare hvis `room === currentRoom`.
-   - Paa `chat:message`: finn `room = incoming.room || currentRoom`; `ensureRoom(room).push(incoming)`; render hvis aktivt rom.
-5) **Render**: I `renderMessages`, hent `const list = ensureRoom(currentRoom)` og loop over den.
+### 1) Flere chat-rom — ferdige innsatser
 
-### B) Tegnbegrensning med validering og feilmeldinger
-Velg grense, f.eks. 280 tegn.
+**1.1 Markup (`index.html`)** — legg inn over chatten:
+```html
+<div class="switcher" id="roomSwitcher" role="tablist" aria-label="Rom">
+  <button class="switcher__tab is-active" data-room="general" role="tab" aria-selected="true">Felles</button>
+  <button class="switcher__tab" data-room="team" role="tab" aria-selected="false">Team</button>
+  <div class="switcher__info">Aktivt rom: <span id="activeRoomLabel">Felles</span></div>
+</div>
+```
 
-**Server (server/index.js):**
+**1.2 Klient (`src/main.js`)** — legg til/erstatt relevante deler:
 ```js
-const MAX_MESSAGE_LENGTH = 280; // topp-nivaa
-...
-socket.on('chat:message', (payload) => {
-  const text = (payload?.text ?? '').toString().trim();
-  if (!text) return;
-  if (text.length > MAX_MESSAGE_LENGTH) {
-    socket.emit('chat:error', {
-      code: 'too_long',
-      limit: MAX_MESSAGE_LENGTH,
-      message: `Meldingen stoppes fordi den er over ${MAX_MESSAGE_LENGTH} tegn.`
-    });
-    return;
+// Rom-konstanter og state
+const ROOM_LABELS = { general: 'Felles', team: 'Team' }
+let currentRoom = 'general'
+const roomMessages = new Map()
+const switcher = document.getElementById('roomSwitcher')
+const activeRoomLabel = document.getElementById('activeRoomLabel')
+
+// Hjelpere for rom
+const ensureRoom = (room) => {
+  if (!roomMessages.has(room)) roomMessages.set(room, [])
+  return roomMessages.get(room)
+}
+const renderRoom = () => showHistory(ensureRoom(currentRoom))
+## HOWTO: Komplett, eksamensklar løsning
+
+Dette dokumentet gir en komplett og praktisk oppskrift du kan bruke under eksamen. Den beskriver hvordan du:
+
+- implementerer et nytt chat-rom (flere rom)
+- legger inn tegnbegrensning med frontend- og backend-validering + tydelige feilmeldinger
+- oppdaterer UI for varsler og pop-ups (regler etter innlogging)
+- ferdigstiller Docker/Docker Compose og Nginx som reverse proxy
+- legger ved et eksempel på GitHub Actions workflow
+
+Følg rekkefølgen: Utvikling → Brukerstøtte → Driftsstøtte. Kopier de relevante kodeblokkene direkte inn i prosjektet.
+
+## Forutsetninger
+
+- Node 18+ / 20 anbefalt
+- `npm install` i repo-rot
+- Dev-server klient: vanligvis `npm run dev` (Vite port 5173)
+- Server: `node server/index.js` (port 3001 eller via Docker)
+
+Filer du typisk oppdaterer: `index.html`, `src/main.js`, `src/styles/_chat.scss` (eller `App.scss`), `server/index.js`, `README.md`.
+
+---
+
+## Utvikling
+
+Målet: flere chat-rom, robust melding-validering (maks 280 tegn), og tydelige feilmeldinger i frontend.
+
+1) Nytt chat-rom
+
+- Markup (`index.html`) — knappesett for romvalg (legg dette i chat-headeren):
+
+```html
+<div class="switcher" id="roomSwitcher" role="tablist" aria-label="Rom">
+  <button class="switcher__tab is-active" data-room="general" role="tab" aria-selected="true">Felles</button>
+  <button class="switcher__tab" data-room="team" role="tab" aria-selected="false">Team</button>
+  <div class="switcher__info">Aktivt rom: <span id="activeRoomLabel">Felles</span></div>
+</div>
+```
+
+- Klientlogikk (`src/main.js`) — romstyring og historie. Nøkkelelementer:
+
+```js
+// Простая хранилка историй по комнате
+const rooms = new Map()
+const ensure = (r) => { if (!rooms.has(r)) rooms.set(r, []); return rooms.get(r) }
+
+// Установить активную комнату и отрисовать её историю
+function setRoom(r) {
+  if (!r || r === currentRoom) return
+  currentRoom = r
+  document.querySelectorAll('.switcher__tab').forEach(t => t.classList.toggle('is-active', t.dataset.room === r))
+  if (activeRoomLabel) activeRoomLabel.textContent = ROOM_LABELS[r] || r
+  renderHistory()
+  socket.emit('chat:join', { room: r }) // попросить сервер прислать историю
+}
+
+// Рендер истории текущей комнаты
+function renderHistory() {
+  const list = ensure(currentRoom)
+  showHistory(list)
+}
+
+// Обработчик клика по переключателю (делегирование)
+document.getElementById('roomSwitcher')?.addEventListener('click', (ev) => {
+  const btn = ev.target.closest('.switcher__tab')
+  if (!btn) return
+  setRoom(btn.dataset.room)
+})
+
+// Сервер присылает историю для конкретной комнаты
+socket.on('chat:history', (payload = {}) => {
+  const r = payload.room || 'general'
+  const list = Array.isArray(payload.history) ? payload.history : []
+  rooms.set(r, list)
+  if (r === currentRoom) renderHistory()
+})
+
+// Новое сообщение от сервера — сохраняем и рендерим если нужно
+socket.on('chat:message', (msg = {}) => {
+  const r = msg.room || 'general'
+  ensure(r).push(msg)
+  if (r === currentRoom) addMessage(msg)
+})
+
+// Когда отправляете, не забывайте указать комнату
+function sendMessage(text) {
+  socket.emit('chat:message', { user: usernameInput.value.trim() || 'Guest', text, room: currentRoom })
+}
+```
+
+På serversiden må du ta imot `payload.room` og lagre/emittere meldingen til riktig rom (se server-eksempel under).
+
+2) Tegnbegrensning og tydelige feilmeldinger
+
+- Frontend markup (legg under tekstfeltet for input):
+
+```html
+<p id="messageError" class="notice notice--error" aria-live="assertive"></p>
+<p class="counter"><span id="messageCount">0</span>/280</p>
+```
+
+Sett også `maxlength="280"` på input/textarea for enkel UX (men husk backend-validering alltid!).
+
+- Frontend logikk (`src/main.js`):
+
+```js
+const MAX_MESSAGE_LENGTH = 280
+const messageInput = document.getElementById('messageInput')
+const messageError = document.getElementById('messageError')
+const messageCount = document.getElementById('messageCount')
+
+function showError(msg) { if (messageError) messageError.textContent = msg || '' }
+
+messageInput?.addEventListener('input', () => {
+  const len = messageInput.value.length
+  if (messageCount) messageCount.textContent = len
+  if (len > MAX_MESSAGE_LENGTH) {
+    showError(`Meldingen er for lang (maks ${MAX_MESSAGE_LENGTH} tegn).`)
+  } else {
+    showError('')
   }
-  // eksisterende melding + broadcast
-});
+})
+
+// Når bruker trykker send
+function handleSend() {
+  const text = messageInput.value.trim()
+  if (!text) { showError('Meldingen ble stoppet fordi den er tom.'); return }
+  if (text.length > MAX_MESSAGE_LENGTH) { showError(`Meldingen er for lang (maks ${MAX_MESSAGE_LENGTH} tegn).`); return }
+  // send videre
+  sendMessage(text)
+  messageInput.value = ''
+  messageCount.textContent = '0'
+}
+
+// lytte etter server-feil
+socket.on('chat:error', (err) => showError(err?.message || 'Meldingen ble stoppet.'))
 ```
 
-**Klient (index.html + src/main.js):**
-1) Legg til under inputen:
-   ```html
-   <p id="messageError" class="notice notice--error" aria-live="assertive"></p>
-   <p class="counter"><span id="messageCount">0</span>/280</p>
-   ```
-   Sett ogsaa `maxlength="280"` paa `#messageInput`.
-2) I `src/main.js`:
-   - Sett `const MAX_MESSAGE_LENGTH = 280;`.
-   - Lytt paa `messageInput.addEventListener('input', ...)`: oppdater `messageCount`, sett en `overLimit` bool naar `text.length > MAX_MESSAGE_LENGTH`, og oppdater `sendButton.disabled` hvis over grensen.
-   - I `sendMessage`, hvis `overLimit`, kall `showError('Meldingen er for lang (maks 280 tegn)')` og `return`.
-   - Lytt paa `socket.on('chat:error', (err) => showError(err?.message || 'Meldingen ble stoppet.'))`.
-   - Implementer `showError(msg)` som setter `messageError.textContent = msg` og toggler en CSS-klasse for synlighet.
+- Backend validering (`server/index.js`) — legges i `chat:message` handler:
 
-**Stil (src/styles/App.scss):**
+```js
+const MAX_MESSAGE_LENGTH = 280
+
+socket.on('chat:message', (payload = {}) => {
+  const user = (payload.user ?? 'Guest').toString().slice(0, 24)
+  const text = (payload.text ?? '').toString().trim()
+  const room = payload.room || 'general'
+  if (!text) {
+    socket.emit('chat:error', { code: 'empty', message: 'Meldingen er tom.' })
+    return
+  }
+  if (text.length > MAX_MESSAGE_LENGTH) {
+    socket.emit('chat:error', { code: 'too_long', limit: MAX_MESSAGE_LENGTH, message: `Meldingen stoppes fordi den er over ${MAX_MESSAGE_LENGTH} tegn.` })
+    return
+  }
+  // lagre og emit
+  const message = { id: randomUUID(), user, text, timestamp: Date.now(), room }
+  const history = getRoom(room)
+  history.push(message)
+  if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY)
+  io.to(room).emit('chat:message', message)
+})
+```
+
+3) UI / SCSS (hurtigstil)
+
+Legg i `src/styles/_chat.scss` eller tilsvarende:
+
 ```scss
-.notice--error {
-  margin: 0.35rem 0 0;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  background: rgba(255, 99, 99, 0.12);
-  border: 1px solid rgba(255, 99, 99, 0.4);
-  color: #ff6b6b;
-}
-.counter {
-  margin: 0.2rem 0 0;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  text-align: right;
-}
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+.notice--error { margin: .35rem 0 0; padding: .5rem .75rem; border-radius: 10px; background: rgba(255,79,97,.12); border: 1px solid rgba(255,79,97,.35); color: #ffb3bc; }
+.counter { margin: .2rem 0 0; color: var(--text-secondary); font-size: .9rem; text-align: right }
+.switcher__tab.is-active { background: var(--accent); color: #fff }
 ```
 
-### C) Oppdater UI for nye varsler
-- Soerg for at feilelementer (`messageError`) er tydelig plassert under inputen.
-- Bruk `aria-live="assertive"` for feilmeldinger og `aria-live="polite"` for statusfelt om onskelig.
-- Legg til tilstands-klasser paa sendeknapp (normal/disabled) slik at brukeren ser naar meldingen ikke kan sendes.
+---
+
+## Brukerstøtte
+
+1) Regler-popup etter innlogging
+
+- Markup (legg i `index.html` rett før `</body>`):
+
+```html
+<div id="rulesModal" class="modal is-hidden" role="dialog" aria-modal="true">
+  <div class="modal__content">
+    <h2>Regler</h2>
+    <ol>
+      <li>Hold deg til tema.</li>
+      <li>Ikke del personopplysninger.</li>
+      <li>Maks 280 tegn per melding.</li>
+    </ol>
+    <button id="rulesClose">Jeg forstår</button>
+  </div>
+</div>
+```
+
+- Enkel CSS (samme SCSS-fil):
+
+```scss
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center }
+.modal.is-hidden { display:none }
+.modal__content { background: var(--panel); padding: 1.5rem; border-radius: 14px; width: min(520px, 90vw) }
+```
+
+- Logikk (`src/main.js`):
+
+```js
+const rulesModal = document.getElementById('rulesModal')
+const rulesClose = document.getElementById('rulesClose')
+
+function maybeShowRules() {
+  if (!rulesModal || !rulesClose) return
+  if (localStorage.getItem('rulesSeen')) return
+  rulesModal.classList.remove('is-hidden')
+  rulesClose.focus()
+}
+
+rulesClose?.addEventListener('click', () => { rulesModal.classList.add('is-hidden'); localStorage.setItem('rulesSeen','1') })
+
+// Kall maybeShowRules etter login/brukernavn er satt
+// f.eks. etter at brukeren fyller inn navn eller trykker "logg inn"
+```
+
+2) Tydelige feilmeldinger
+
+- Bruk aria-live (`aria-live="assertive"`) på `#messageError` så skjermlesere fanges opp.
+- Send feilkoder fra server (`code: 'too_long'`) og vis menneskelig tekst i frontend.
+- Ha egne meldinger for: tom melding, for lang, frakobling, manglende navn.
+
+3) README-oppdatering (kort forslag du kan lime inn i `README.md`)
+
+Legg til en seksjon "Quick start" og "Regler":
+
+```md
+## Quick start
+- npm install
+- npm run dev   # utvikling
+- node server/index.js  # start backend
+
+## Funksjoner
+- Flere chat-rom
+- Meldingslengde-grense: 280 tegn
+- Regler-popup ved første innlogging
+
+## Regler
+1. Hold deg til tema.
+2. Ikke del personopplysninger.
+3. Maks 280 tegn per melding.
+```
 
 ---
 
-## Brukerstotte
+## Driftsstøtte
 
-### A) Pop-up med regler etter innlogging
-1) **Markup (index.html):**
-   ```html
-   <div id="rulesModal" class="modal is-hidden" role="dialog" aria-modal="true">
-     <div class="modal__content">
-       <h2>Regler</h2>
-       <ol>
-         <li>Hold deg til tema.</li>
-         <li>Ikke del personopplysninger.</li>
-         <li>Maks 280 tegn per melding.</li>
-       </ol>
-       <button id="rulesClose">Jeg forstar</button>
-     </div>
-   </div>
-   ```
-2) **Logikk (src/main.js):**
-   - Ved forste gang brukeren fyller inn navn: sjekk `localStorage.getItem('rulesSeen')`.
-   - Hvis ikke satt: vis modalen (fjern `is-hidden`), disable sendeknapp, fokuser close-knappen.
-   - Paa lukking: sett `localStorage.setItem('rulesSeen', '1')`, skjul modalen, reaktiver sendeknapp.
-3) **Stil (App.scss):**
-   ```scss
-   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; }
-   .modal.is-hidden { display: none; }
-   .modal__content { background: #111; padding: 1.5rem; border-radius: 12px; width: min(520px, 90vw); }
-   ```
-   Valgfritt: fang Tab-fokus inne i modalen for ekstra tilgjengelighet.
+1) Dockerfile (eksempel)
 
-### B) Tilpass feilmeldinger (forklar hvorfor stoppet)
-- Tom melding: "Meldingen ble stoppet fordi den er tom."
-- For lang: "Meldingen ble stoppet fordi den er over 280 tegn."
-- Mangler navn: "Skriv inn navnet ditt for aa sende."
-- Frakoblet: "Ingen forbindelse - prov igjen senere."
-Plasser tekstene i `messageError` eller et eget banner med `aria-live="assertive"`.
+Lag en `Dockerfile` i prosjektrot med flerstegs-build (bygger frontend, kjører server):
 
-### C) Oppdater README med brukerveiledning og regler
-- Legg til en seksjon "Regler" med punktliste.
-- Legg til skjermbilder/gifs etter behov.
-- Beskriv kort hvordan navn settes, hvordan rom byttes, og hva som skjer naar meldinger stoppes.
-
----
-
-## Driftsstotte
-
-### A) Fullfoer Dockerfile og docker-compose
-**Dockerfile (eksempel multi-stage):**
 ```Dockerfile
-FROM ubuntu:22.04 AS base
-ENV DEBIAN_FRONTEND=noninteractive NODE_VERSION=20
-RUN apt-get update && apt-get install -y ca-certificates curl gnupg \
-  && mkdir -p /etc/apt/keyrings \
-  && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-  && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_VERSION.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
-  && apt-get update && apt-get install -y nodejs && apt-get clean && rm -rf /var/lib/apt/lists/*
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-FROM base AS builder
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM base AS server
-ENV NODE_ENV=production PORT=3001 CLIENT_ORIGIN=http://localhost:5173
+FROM node:20-alpine AS server
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY server ./server
 COPY --from=builder /app/dist ./dist
+ENV PORT=3001
 EXPOSE 3001
 CMD ["node", "server/index.js"]
 
-FROM nginx:1.25-alpine AS nginx
+# Valgfri: bygge en nginx image for static hosting
+FROM nginx:alpine AS nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 ```
 
-**docker-compose.yml:**
+2) docker-compose.yml
+
 ```yaml
-version: "3.9"
+version: '3.8'
 services:
   app:
     build:
       context: .
       target: server
     environment:
-      PORT: 3001
-      CLIENT_ORIGIN: http://localhost
+      - PORT=3001
+      - CLIENT_ORIGIN=http://localhost
     ports:
-      - "3001:3001"
-
+      - '3001:3001'
   nginx:
     build:
       context: .
@@ -236,18 +339,16 @@ services:
     depends_on:
       - app
     ports:
-      - "80:80"
+      - '80:80'
 ```
 
-### B) Konfigurer Nginx som reverse proxy
-Opprett `docker/nginx.conf`:
+3) Nginx config for ws reverse proxy (`docker/nginx.conf`)
+
 ```nginx
 server {
   listen 80;
   server_name _;
-
   root /usr/share/nginx/html;
-  index index.html;
 
   location / {
     try_files $uri $uri/ /index.html;
@@ -264,33 +365,29 @@ server {
 }
 ```
 
-### C) Starte med docker-compose
-```bash
-docker compose up -d --build
-docker compose logs -f app nginx
-```
-Aapne `http://localhost` (nginx), og verifiser at WebSocket oppgraderer i nettverksfanen.
+4) Starte systemet lokalt med Docker
 
-### D) Workflow-fil som eksempel paa automatisering
-Lag `.github/workflows/ci.yml`:
+- Bygg og start: `docker compose up -d --build`
+- Åpne `http://localhost` i nettleseren. Websocket-tilkoblingen vil gå via Nginx til `app:3001`.
+- Verifiser i nettverksfanen at `/socket.io/` har en 101-protokoll (Upgrade).
+
+5) Eksempel GitHub Actions workflow (valgfritt) — `.github/workflows/ci.yml`
+
+Dette er et enkelt eksempel som bygger, lint'er og bygger Docker images (uten å pushe):
+
 ```yaml
-name: CI
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+name: ci
+on: [push, pull_request]
 jobs:
-  lint-build-docker:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
       - run: npm ci
-      - run: npm run lint
+      - run: npm run lint || true
       - run: npm run build
       - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
@@ -299,21 +396,25 @@ jobs:
           target: server
           push: false
           tags: local/socketio-app:ci
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: nginx
-          push: false
-          tags: local/socketio-nginx:ci
+
 ```
-Tilpass node-versjon, legg til tester, eller slaa paa push ved behov.
 
 ---
 
-## Sjekkliste naar du er ferdig
-- [ ] Bytte mellom rom fungerer, historikk er per rom.
-- [ ] Tegnbegrensning haandheves paa server; frontend viser teller og feilmeldinger.
-- [ ] Regler-pop-up vises en gang per bruker (lagres i localStorage).
-- [ ] README er oppdatert med brukerveiledning + regler.
-- [ ] Docker/compose/nginx starter og proxier til appen.
-- [ ] Workflow ligger i `.github/workflows/ci.yml` og kjoerer lint/build/docker-build.
+## Verifikasjon / kontroll-liste (bruk under eksamen)
+
+1. Bytt rom i UI — meldinger fra valgt rom vises.
+2. Skriv en for lang melding (>280) — frontend viser feilmelding, server sender `chat:error`.
+3. Første gang etter login — regler-popup vises og kan lukkes (lagres i localStorage).
+4. Start via Docker: `docker compose up -d --build` — åpne `http://localhost`.
+
+## Hva jeg endret/tilbyr i HOWTO
+
+- Fullstendige kodeeksempler for klient og server (rom + validering).
+- SCSS-eksempler for synlige feilmeldinger og rom-switcher.
+- Dockerfile, docker-compose.yml og `nginx.conf` for produksjons-sannsynlig oppsett.
+- Eksempel CI workflow.
+
+Lykke til på eksamen — kopier inn kodeblokkene i repoet, kjør testene/bygget og verifiser funksjonaliteten lokalt. Om du vil kan jeg også legge ferdige filer (Dockerfile, docker/nginx.conf, og workflow) direkte inn i repoet.
+
+```

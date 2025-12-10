@@ -1,72 +1,103 @@
-import { createServer } from 'http'
-import { Server } from 'socket.io'
-import { randomUUID } from 'crypto'
+import { io } from 'socket.io-client' // подключаем клиент Socket.IO
+import './styles/index.scss' // подключаем стили приложения
 
-// На каком порту запустить сервер (можно задать через переменную окружения)
-const PORT = process.env.PORT ?? 3001
+const $ = (id) => document.getElementById(id) // короткая функция для поиска элемента по id
+const statusEl = $('status') // блок со статусом подключения
+const statusText = statusEl?.querySelector('.status__text') // текстовая часть статуса
+const form = $('messageForm') // форма отправки сообщения
+const messageInput = $('messageInput') // поле ввода сообщения
+const sendButton = $('sendButton') // кнопка отправки
+const usernameInput = $('usernameInput') // поле ввода имени
+const messages = $('messagesContainer') // контейнер для всех сообщений
 
-// Какому фронтенду (сайту) разрешаем подключаться
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173'
 
-// Сколько последних сообщений хранить в истории
-const MAX_HISTORY = 50
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001' // адрес сокет-сервера
+let connected = false // флаг, подключён ли клиент сейчас
 
-// Массив для хранения сообщений
-const history = []
+const setStatus = (state, text) => { // обновляем визуальный статус
+  if (!statusEl || !statusText) return // если элементов нет — выходим
+  statusEl.className = `status status--${state}` // ставим класс по состоянию
+  statusText.textContent = text // обновляем текст статуса
+}
 
-// Создаём обычный HTTP-сервер
-const httpServer = createServer()
+const toggleSendButton = () => { // включаем/выключаем кнопку
+  if (!sendButton || !messageInput) return // если элементов нет — выходим
+  sendButton.disabled = !connected || !messageInput.value.trim() // выключаем, если нет связи или текста
+}
 
-// Создаём Socket.io-сервер и "вешаем" его на HTTP-сервер
-const io = new Server(httpServer, {
-  cors: {
-    origin: CLIENT_ORIGIN,
-  },
+
+const addMessage = ({ user, text, timestamp }) => {
+  if (!messages) return;
+  const item = document.createElement('article');
+  item.className = 'message';
+  // шаблон без лишнего текста перед разметкой
+  item.innerHTML = `
+    <div class="message__meta">
+      <span class="message__user">${user || 'Guest'}</span>
+      <time>${new Date(timestamp || Date.now()).toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' })}</time>
+    </div>
+    <p class="message__text"></p>
+  `;
+  item.querySelector('.message__text').textContent = text || '';
+  messages.appendChild(item);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+const showHistory = (list) => { // полностью перерисовываем историю
+  if (!messages) return // если контейнера нет — выходим
+  messages.innerHTML = '' // очищаем старый список
+  list.forEach(addMessage) // добавляем каждое сообщение
+}
+
+const socket = io(SOCKET_URL) // создаём подключение к сокету
+
+setStatus('connecting', 'kobler til...') // показываем, что идёт подключение
+toggleSendButton() // обновляем состояние кнопки
+
+socket.on('connect', () => { // когда подключились
+  connected = true // ставим флаг подключения
+  setStatus('connected', 'tilkoblet') // обновляем статус
+  toggleSendButton() // включаем кнопку, если есть текст
 })
 
-// Когда новый клиент подключился
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id)
-
-  // Отправляем ему историю сообщений
-  socket.emit('chat:history', history)
-
-  // Когда клиент прислал сообщение
-  socket.on('chat:message', (payload) => {
-    const user = String(payload?.user || 'Guest').slice(0, 24)
-    const text = String(payload?.text || '').trim()
-
-    // Пустые сообщения игнорируем
-    if (!text) return
-
-    // Собираем объект сообщения
-    const message = {
-      id: randomUUID(),
-      user,
-      text,
-      timestamp: Date.now(),
-    }
-
-    // Кладём в историю
-    history.push(message)
-
-    // Если сообщений больше, чем MAX_HISTORY — обрезаем старые
-    if (history.length > MAX_HISTORY) {
-      history.splice(0, history.length - MAX_HISTORY)
-    }
-
-    // Отправляем это сообщение всем подключённым клиентам
-    io.emit('chat:message', message)
-  })
-
-  // Когда клиент отключился
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id)
-  })
+socket.on('disconnect', () => { // когда отключились
+  connected = false // снимаем флаг подключения
+  setStatus('error', 'frakoblet') // показываем статус ошибки
+  toggleSendButton() // блокируем кнопку
 })
 
-// Запускаем сервер
-httpServer.listen(PORT, () => {
-  console.log(`Socket server running on http://localhost:${PORT}`)
-  console.log(`Allowing client origin: ${CLIENT_ORIGIN}`)
+socket.on('connect_error', () => { // если не удалось подключиться
+  connected = false // снимаем флаг
+  setStatus('error', 'feil ved tilkobling') // пишем об ошибке
+  toggleSendButton() // блокируем кнопку
+})
+
+socket.on('reconnect_attempt', () => { // при попытке переподключения
+  setStatus('connecting', 'kobler til på nytt...') // показываем сообщение
+})
+
+socket.on('chat:history', (payload) => { // когда сервер прислал историю
+  const list = Array.isArray(payload) ? payload : payload?.history || [] // достаём массив сообщений
+  showHistory(list) // рисуем историю
+})
+
+socket.on('chat:message', addMessage) // каждое новое сообщение добавляем в список
+
+messageInput?.addEventListener('input', toggleSendButton) // при вводе текста обновляем кнопку
+
+form?.addEventListener('submit', (event) => { // обработка отправки формы
+  event.preventDefault() // блокируем перезагрузку страницы
+  if (!connected || !messageInput) return // если нет связи или поля — выходим
+
+  const text = messageInput.value.trim() // берём текст и обрезаем пробелы
+  if (!text) return // пустые строки не отправляем
+
+  socket.emit('chat:message', { // отправляем событие на сервер
+    user: usernameInput?.value.trim() || 'Guest', // имя или Guest
+    text, // сам текст
+  })
+
+  messageInput.value = '' // очищаем поле
+  toggleSendButton() // обновляем кнопку
+  messageInput.focus() // возвращаем фокус в поле
 })

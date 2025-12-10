@@ -6,41 +6,6 @@
   padding: 2.5rem clamp(1rem, 2vw, 2rem) 3rem;
 }
 
-.switcher {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin: 1.5rem 0 0.5rem;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 0.75rem 1rem;
-  box-shadow: var(--shadow);
-  flex-wrap: wrap;
-
-  &__tab {
-    padding: 0.65rem 1rem;
-    border-radius: 12px;
-    border: 1px solid transparent;
-    background: vars.$glass-04;
-    color: var(--text-primary);
-    box-shadow: none;
-
-    &.is-active {
-      background: vars.$switcher-active-gradient;
-      border-color: vars.$glass-04;
-    }
-  }
-
-  &__info {
-    margin-left: auto;
-    color: var(--text-secondary);
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-}
 
 .chat {
   margin-top: 2rem;
