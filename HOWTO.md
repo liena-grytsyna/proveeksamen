@@ -110,17 +110,33 @@ Sett også `maxlength="280"` på input/textarea for enkel UX (men husk backend-v
 
 - Frontend logikk (`src/main.js`):
 
-```js
-const MAX_MESSAGE_LENGTH = 280
-const messageInput = document.getElementById('messageInput')
-const messageError = document.getElementById('messageError')
-const messageCount = document.getElementById('messageCount')
+```Ок, ось мінімальна, найпростіша, найнадійніша версія валідації повідомлень для екзамену.
+Вона:
+	•	коротка
+	•	працює
+	•	легко пояснюється
+	•	не ламає структуру твого коду
+	•	займає мінімум місця
+	•	додає і клієнтську, і серверну перевірку
 
-function showError(msg) { if (messageError) messageError.textContent = msg || '' }
+ЦЕ САМЕ ТЕ, ЩО НАЙБЕЗПЕЧНІШЕ РОБИТИ НА ЕКЗАМЕНІ.
+
+⸻
+
+✅ 1. Мінімальний frontend-код (main.js)
+
+🔹 Додаєш один блок коду (10 рядків):
+Постав після оголошення messageInput / messageError.
+
+const MAX_MESSAGE_LENGTH = 280
+const messageError = document.getElementById('messageError')
+
+function showError(msg) {
+  if (messageError) messageError.textContent = msg || ''
+}
 
 messageInput?.addEventListener('input', () => {
   const len = messageInput.value.length
-  if (messageCount) messageCount.textContent = len
   if (len > MAX_MESSAGE_LENGTH) {
     showError(`Meldingen er for lang (maks ${MAX_MESSAGE_LENGTH} tegn).`)
   } else {
@@ -128,55 +144,77 @@ messageInput?.addEventListener('input', () => {
   }
 })
 
-// Når bruker trykker send
-function handleSend() {
-  const text = messageInput.value.trim()
-  if (!text) { showError('Meldingen ble stoppet fordi den er tom.'); return }
-  if (text.length > MAX_MESSAGE_LENGTH) { showError(`Meldingen er for lang (maks ${MAX_MESSAGE_LENGTH} tegn).`); return }
-  // send videre
-  sendMessage(text)
-  messageInput.value = ''
-  messageCount.textContent = '0'
+
+⸻
+
+🔹 Додаєш мінімальну перевірку у sendMessage:
+
+Знайди:
+
+const text = messageInput.value.trim()
+
+Після нього встав:
+
+if (!text) {
+  showError('Meldingen er tom.')
+  return
 }
 
-// lytte etter server-feil
-socket.on('chat:error', (err) => showError(err?.message || 'Meldingen ble stoppet.'))
-```
+if (text.length > MAX_MESSAGE_LENGTH) {
+  showError(`Meldingen er for lang (maks ${MAX_MESSAGE_LENGTH} tegn).`)
+  return
+}
 
-- Backend validering (`server/index.js`) — legges i `chat:message` handler:
 
-```js
+⸻
+
+✅ 2. Мінімальний backend-код (server/index.js)
+
+У твоєму socket.on('chat:message') вставляєш:
+
 const MAX_MESSAGE_LENGTH = 280
 
 socket.on('chat:message', (payload = {}) => {
-  const user = (payload.user ?? 'Guest').toString().slice(0, 24)
   const text = (payload.text ?? '').toString().trim()
-  const room = payload.room || 'general'
+
   if (!text) {
-    socket.emit('chat:error', { code: 'empty', message: 'Meldingen er tom.' })
+    socket.emit('chat:error', { message: 'Meldingen er tom.' })
     return
   }
+
   if (text.length > MAX_MESSAGE_LENGTH) {
-    socket.emit('chat:error', { code: 'too_long', limit: MAX_MESSAGE_LENGTH, message: `Meldingen stoppes fordi den er over ${MAX_MESSAGE_LENGTH} tegn.` })
+    socket.emit('chat:error', { message: `Meldingen er for lang (maks ${MAX_MESSAGE_LENGTH} tegn).` })
     return
   }
-  // lagre og emit
-  const message = { id: randomUUID(), user, text, timestamp: Date.now(), room }
-  const history = getRoom(room)
-  history.push(message)
-  if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY)
-  io.to(room).emit('chat:message', message)
+
+  // Далі твоя логіка як була
 })
-```
 
-3) UI / SCSS (hurtigstil)
 
-Legg i `src/styles/_chat.scss` eller tilsvarende:
+⸻
 
-```scss
-.notice--error { margin: .35rem 0 0; padding: .5rem .75rem; border-radius: 10px; background: rgba(255,79,97,.12); border: 1px solid rgba(255,79,97,.35); color: #ffb3bc; }
-.counter { margin: .2rem 0 0; color: var(--text-secondary); font-size: .9rem; text-align: right }
-.switcher__tab.is-active { background: var(--accent); color: #fff }
+✅ 3. Мінімальна прослушка помилок на клієнті
+
+У main.js додай один рядок:
+
+socket.on('chat:error', (err) => showError(err?.message))
+
+
+⸻
+
+🎉 ГОТОВО
+
+Це найпростіша та найбезпечніша версія, яку:
+	•	ти точно встигнеш
+	•	легко захистиш перед сенсором
+	•	легко продемонструєш
+	•	не ризикуєш нічого зламати
+
+Бонус: цей мінімальний варіант виглядає професійно, але реально займає менше 25 рядків.
+
+⸻
+
+Хочеш, я вставлю цей мінімальний код точно в твій файл main.js і server.js, щоб ти просто скопіювала готові файли без думання?
 ```
 
 ---
