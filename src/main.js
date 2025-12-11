@@ -6,15 +6,18 @@ const statusEl = $('status') // блок со статусом подключе�
 const statusText = statusEl?.querySelector('.status__text') // текстовая часть статуса
 const form = $('messageForm') // форма отправки сообщения
 const messageInput = $('messageInput') // поле ввода сообщения
-const sendButton = $('sendButton') // кнопка отправки
-const usernameInput = $('usernameInput') // поле ввода имени
-const messages = $('messagesContainer') // контейнер для всех сообщений
+const sendButton = $('sendButton')
+const usernameInput = $('usernameInput') 
+const messages = $('messagesContainer')
+
+const MAX_LENGTH_MESSAGE = 200
 
 // Room state: labels, current room and per-room histories
-const ROOM_LABELS = { general: 'Generell', team: 'Team' }
+const ROOM_LABELS = { general: 'Generell', team: 'Team', random: 'Random' }
 let currentRoom = 'general'
-const rooms = new Map()
-const ensure = (r) => { if (!rooms.has(r)) rooms.set(r, []); return rooms.get(r) }
+const roomHistories = new Map()
+
+const ensure = (r) => { if (!roomHistories.has(r)) roomHistories.set(r, []); return roomHistories.get(r) }
 const activeRoomLabel = document.getElementById('activeRoomLabel')
 
 // Set active room and render its history
@@ -108,7 +111,7 @@ socket.on('reconnect_attempt', () => { // при попытке переподк
 socket.on('chat:history', (payload = {}) => {
   const r = payload.room || 'general'
   const list = Array.isArray(payload.history) ? payload.history : (Array.isArray(payload) ? payload : [])
-  rooms.set(r, list)
+  roomHistories.set(r, list)
   if (r === currentRoom) renderHistory()
 })
 
@@ -121,12 +124,27 @@ socket.on('chat:message', (msg = {}) => {
 
 messageInput?.addEventListener('input', toggleSendButton) // при вводе текста обновляем кнопку
 
+messageInput?.addEventListener('input', (e) => {
+  const charCount = e.target.value.length
+
+  if (charCount > MAX_LENGTH_MESSAGE) {
+    messageInput.classList.add('error')
+  } else {
+    messageInput.classList.remove('error')
+  }
+})
+
 form?.addEventListener('submit', (event) => { // обработка отправки формы
   event.preventDefault() // блокируем перезагрузку страницы
   if (!connected || !messageInput) return // если нет связи или поля — выходим
 
-  const text = messageInput.value.trim() // берём текст и обрезаем пробелы
+  let text = messageInput.value.trim() // берём текст и обрезаем пробелы
   if (!text) return // пустые строки не отправляем
+
+  // Ограничиваем длину сообщения
+  if (text.length > MAX_LENGTH_MESSAGE) {
+    text = text.substring(0, MAX_LENGTH_MESSAGE)
+  }
 
   socket.emit('chat:message', { // отправляем событие на сервер
     user: usernameInput?.value.trim() || 'Guest', // имя или Guest

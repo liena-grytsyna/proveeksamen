@@ -6,6 +6,29 @@
   padding: 2.5rem clamp(1rem, 2vw, 2rem) 3rem;
 }
 
+.switcher {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.switcher__tab {
+  align-items: flex-start;
+
+  &.is-active {
+    background: vars.$color-accent-2;
+    box-shadow: vars.$shadow-input-focus;
+  }
+
+}
+
+.switcher__info {
+  display: flex;
+  
+  align-items: flex-end;
+}
+
+
 
 .chat {
   margin-top: 2rem;
@@ -121,4 +144,10 @@
 
 .composer input {
   flex: 1;
+}
+
+input.error,
+textarea.error {
+  border-color: vars.$color-error;
+  box-shadow: 0 0 0 3px rgba(255, 79, 97, 0.2);
 }

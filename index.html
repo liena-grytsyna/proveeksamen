@@ -32,6 +32,16 @@
                 placeholder="F.eks. Nova"
               />
             </label>
+            <div class="chat-info">
+              <p class="chat-info__item">
+                <strong>Regler:</strong>
+              </p>
+              <ul class="chat-info__list">
+                <li class="chat-info__item">Vær respektfull mot andre brukere</li>
+                <li class="chat-info__item">Ikke del personlig informasjon </li>
+                <li class="chat-info__item">Maks 200 tegn per melding</li>
+              </ul>
+            </div>
           </div>
         </section>
 
@@ -39,7 +49,8 @@
           <div class="switcher" id="roomSwitcher" role="tablist" aria-label="Rom">
             <button class="switcher__tab is-active" data-room="general" role="tab" aria-selected="true">Felles</button>
             <button class="switcher__tab" data-room="team" role="tab" aria-selected="false">Team</button>
-            <div class="switcher__info">Aktivt rom: <span id="activeRoomLabel">Felles</span></div>
+            <button class="switcher__tab" data-room="random" role="tab" aria-selected="false">Random</button>
+            <div class="switcher__info">Aktivt rom: <span id="activeRoomLabel"> Felles</span></div>
           </div>
           <div class="messages" id="messagesContainer" aria-live="polite"></div>
           <form class="composer" id="messageForm">
@@ -51,6 +62,7 @@
             <button type="submit" id="sendButton" disabled>
               Send
             </button>
+
           </form>
         </section>
       </main>
