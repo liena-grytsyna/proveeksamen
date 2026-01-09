@@ -1,21 +1,30 @@
-version: '3.9'
+version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      target: server
+    build: .
+    container_name: chat-app
     environment:
-      PORT: 3001
-      CLIENT_ORIGIN: http://chat.it4.iktim.no
-    ports:
-      - "3001:3001"
+      - NODE_ENV=production
+      - PORT=3001
+    restart: unless-stopped
+    networks:
+      - chat-network
 
   nginx:
-    build:
-      context: .
-      target: nginx
-    depends_on:
-      - app
+    image: nginx:alpine
+    container_name: chat-nginx
     ports:
       - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./dist:/usr/share/nginx/html:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - chat-network
+
+networks:
+  chat-network:
+    driver: bridge

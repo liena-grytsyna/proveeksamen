@@ -42,7 +42,11 @@ document.getElementById('roomSwitcher')?.addEventListener('click', (ev) => {
   setRoom(btn.dataset.room)
 })
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001' // адрес сокет-сервера
+// В продакшене используем относительный путь (nginx проксирует),
+// в dev режиме - явный URL
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 
+  (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)
+
 let connected = false // флаг, подключён ли клиент сейчас
 
 const setStatus = (state, text) => { // обновляем визуальный статус

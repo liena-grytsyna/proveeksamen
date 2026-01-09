@@ -1,50 +1,31 @@
-FROM ubuntu:22.04 AS base
-
-ENV DEBIAN_FRONTEND=noninteractive \
-    NODE_VERSION=20
-
-RUN apt-get update && \
-    apt-get install -y ca-certificates curl gnupg && \
-    mkdir -p /etc/apt/keyrings && \
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_VERSION.x nodistro main" \
-      | tee /etc/apt/sources.list.d/nodesource.list && \
-    apt-get update && \
-    apt-get install -y nodejs && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Этап 1: Сборка фронтенда
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-FROM base AS builder
-
+# Копируем package.json и устанавливаем зависимости
 COPY package*.json ./
 RUN npm ci
 
+# Копируем исходники и собираем фронтенд
 COPY . .
-
-# Build with empty SOCKET_URL to use relative path
-ENV VITE_SOCKET_URL=""
 RUN npm run build
 
-FROM base AS server
-
-ENV NODE_ENV=production \
-    PORT=3001 \
-    CLIENT_ORIGIN=http://localhost
+# Этап 2: Продакшн образ
+FROM node:20-alpine
 
 WORKDIR /app
 
+# Устанавливаем только production зависимости
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --only=production
 
-COPY server ./server
+# Копируем собранный фронтенд и серверный код
 COPY --from=builder /app/dist ./dist
+COPY server ./server
 
+# Открываем порт для Socket.IO сервера
 EXPOSE 3001
 
+# Запускаем сервер
 CMD ["node", "server/index.js"]
-
-FROM nginx:1.25-alpine AS nginx
-
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
